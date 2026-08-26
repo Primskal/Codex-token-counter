@@ -1,0 +1,7 @@
+/* Shared column geometry keeps the table headings aligned with body values. */
+table{width:100%;min-width:900px;table-layout:fixed;border-collapse:collapse;font-size:13px}
+col.date-column{width:14%}
+col.model-column{width:22%}
+col.token-column{width:12.8%}
+th:nth-child(n+3),td:nth-child(n+3){text-align:right;font-variant-numeric:tabular-nums}
+td:nth-child(2){overflow-wrap:anywhere}

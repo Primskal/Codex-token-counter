@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="csrf-token" content="__CSRF_TOKEN__">
+  <title>Codex Token Monitor</title>
+  <link rel="stylesheet" href="/dashboard.css">
+  <link rel="stylesheet" href="/dashboard-layout.css">
+</head>
+<body>
+  <header>
+    <div><span class="eyebrow">LOCAL · PRIVATE</span><h1>Codex Token Monitor</h1></div>
+    <div id="watch-state" class="status-pill">시작 중</div>
+  </header>
+  <main>
+    <section class="toolbar panel">
+      <div class="presets">
+        <button data-range="today" aria-pressed="false">오늘</button><button data-range="7d" aria-pressed="false">이번 주</button><button data-range="month" aria-pressed="false">이번 달</button><button data-range="quarter" aria-pressed="false">분기</button><button data-range="half" aria-pressed="false">반기</button><button data-range="year" aria-pressed="false">1년</button>
+      </div>
+      <label>시작일 <input id="start-date" type="date"></label>
+      <label>종료일 <input id="end-date" type="date"></label>
+      <button id="apply-range" class="primary">조회</button>
+      <a id="csv-link" class="button-link" href="#">CSV 내보내기</a>
+    </section>
+
+    <section class="cards">
+      <article class="metric"><span>전체 토큰</span><strong id="m-total">0</strong></article>
+      <article class="metric"><span>입력</span><strong id="m-input">0</strong></article>
+      <article class="metric"><span>출력</span><strong id="m-output">0</strong></article>
+      <article class="metric"><span>캐시 입력</span><strong id="m-cache">0</strong></article>
+      <article class="metric"><span>추론 출력</span><strong id="m-reasoning">0</strong></article>
+    </section>
+
+    <section class="grid-two">
+      <article class="panel"><div class="section-title"><h2>사용량 추세</h2></div><div id="trend-legend" class="trend-legend" aria-label="차트 범례"></div><div id="trend-chart" class="trend-chart"><canvas id="trend" width="900" height="270" aria-label="기간별 모델 및 총 토큰 사용량 추세"></canvas><div id="trend-tooltip" class="trend-tooltip" role="status" hidden></div></div></article>
+      <article class="panel"><div class="section-title"><h2>모델별 합계</h2></div><div id="model-totals" class="model-list"></div></article>
+    </section>
+
+    <section class="panel">
+      <div class="section-title"><h2>날짜 × 모델</h2><span id="row-count"></span></div>
+      <div class="table-wrap"><table><colgroup><col class="date-column"><col class="model-column"><col class="token-column"><col class="token-column"><col class="token-column"><col class="token-column"><col class="token-column"></colgroup><thead><tr><th>날짜</th><th>모델</th><th>입력</th><th>출력</th><th>캐시 입력</th><th>추론 출력</th><th>전체</th></tr></thead><tbody id="usage-body"></tbody></table></div>
+    </section>
+
+    <section class="grid-two">
+      <article class="panel"><div class="section-title"><h2>동기화 상태</h2><button id="rescan">즉시 재스캔</button></div><dl id="sync-details"></dl></article>
+      <article class="panel"><div class="section-title"><h2>진단</h2><button id="reset-diagnostics">진단 초기화</button></div><div id="diagnostics"></div></article>
+    </section>
+
+    <section class="panel" id="settings">
+      <div class="section-title"><h2>설정</h2><button id="pause-toggle">감시 일시중지</button></div>
+      <form id="settings-form">
+        <label class="wide">사용자 지정 로그 경로 (한 줄에 하나)<textarea id="custom-paths" rows="3" placeholder="기본 경로는 자동 탐지됩니다"></textarea></label>
+        <label>백필 범위 (일, 0=전체)<input id="backfill-days" type="number" min="0" max="36500"></label>
+        <label>재조정 간격 (초)<input id="scan-interval" type="number" min="2" max="3600"></label>
+        <label class="check"><input id="autostart" type="checkbox"> Windows 로그인 시 자동 시작 (현재 사용자만)</label>
+        <button class="primary" type="submit">설정 저장</button><span id="settings-result"></span>
+      </form>
+      <p class="privacy">원본 로그는 읽기 전용입니다. 대화·프롬프트·응답·도구 내용·인증정보는 저장하거나 전송하지 않습니다.</p>
+    </section>
+  </main>
+  <script src="/format.js"></script>
+  <script src="/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+"""Codex Token Monitor."""
+
+__version__ = "1.2.3"

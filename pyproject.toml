@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codex-token-monitor"
+version = "1.2.3"
+description = "Windows tray monitor for privacy-preserving Codex local token usage statistics"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "Pillow>=11.0,<13",
+  "pystray>=0.19.5,<1",
+  "tzdata>=2025.2",
+  "watchdog>=6.0,<7",
+]
+
+[project.scripts]
+codex-token-monitor = "codex_token_monitor.app:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+codex_token_monitor = ["web/*.html", "web/*.css", "web/*.js"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

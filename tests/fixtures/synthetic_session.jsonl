@@ -1,0 +1,4 @@
+{"timestamp":"2026-08-24T10:00:00.000Z","type":"session_meta","payload":{"id":"fixture-session","session_id":"fixture-session","source":"synthetic"}}
+{"timestamp":"2026-08-24T10:00:01.000Z","type":"turn_context","payload":{"turn_id":"fixture-turn","model":"gpt-5.6-sol"}}
+{"timestamp":"2026-08-24T10:00:02.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":10,"output_tokens":4,"cached_input_tokens":3,"reasoning_output_tokens":1,"total_tokens":14,"cache_write_input_tokens":0},"last_token_usage":{"input_tokens":10,"output_tokens":4,"cached_input_tokens":3,"reasoning_output_tokens":1,"total_tokens":14,"cache_write_input_tokens":0},"model_context_window":200000},"rate_limits":null}}
+
