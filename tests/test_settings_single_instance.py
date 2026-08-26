@@ -70,7 +70,7 @@ def test_settings_validation_is_bounded(tmp_path):
         "scan_interval_seconds": 99999,
         "autostart_enabled": False,
     })
-    assert clean["backfill_days"] == 0
+    assert "custom_log_paths" not in clean
+    assert "backfill_days" not in clean
     assert clean["scan_interval_seconds"] == 3600
     assert clean["autostart_enabled"] is False
-

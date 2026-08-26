@@ -164,11 +164,10 @@ class DashboardServer:
                             )
                         self._json(status)
                     elif parsed.path == "/api/settings":
-                        settings = owner.repository.all_settings()
-                        settings.pop("autostart_managed_command", None)
-                        settings.setdefault("custom_log_paths", [])
-                        settings.setdefault("backfill_days", 0)
-                        settings.setdefault("scan_interval_seconds", 15)
+                        stored_settings = owner.repository.all_settings()
+                        settings = {
+                            "scan_interval_seconds": stored_settings.get("scan_interval_seconds", 15),
+                        }
                         settings["autostart_enabled"] = owner.autostart.enabled()
                         self._json(settings)
                     elif parsed.path == "/api/csv":
@@ -208,7 +207,7 @@ class DashboardServer:
                         owner.repository.reset_diagnostics()
                     elif parsed.path == "/api/settings":
                         clean = validate_settings(payload)
-                        for key in ("custom_log_paths", "backfill_days", "scan_interval_seconds"):
+                        for key in ("scan_interval_seconds",):
                             if key in clean:
                                 owner.repository.set_setting(key, clean[key])
                         if "autostart_enabled" in clean:

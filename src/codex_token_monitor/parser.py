@@ -5,11 +5,11 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-from .models import ParseOutcome, ParsedTokenEvent, ParserState, TokenUsage
+from .models import ParseOutcome, ParsedTokenEvent, ParserState, TokenUsage, TurnModelHint
 from .privacy import canonical_numeric_json, irreversible_hash
 
 
-PARSER_SCHEMA_VERSION = 2
+PARSER_SCHEMA_VERSION = 3
 KST = ZoneInfo("Asia/Seoul")
 _MAX_MODEL_LENGTH = 160
 
@@ -78,7 +78,14 @@ class CodexEventParser:
             raw_turn = payload.get("turn_id")
             self.state.turn_hash = irreversible_hash("turn", self.state.session_hash, raw_turn) if raw_turn else "unknown"
             self.state.model = _safe_model(payload.get("model"))
-            return ParseOutcome()
+            hint = None
+            if (
+                self.state.session_hash != "unknown"
+                and self.state.turn_hash != "unknown"
+                and self.state.model != "unknown"
+            ):
+                hint = TurnModelHint(self.state.session_hash, self.state.turn_hash, self.state.model)
+            return ParseOutcome(model_hint=hint)
 
         if record_type != "event_msg" or payload.get("type") != "token_count":
             return ParseOutcome()

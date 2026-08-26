@@ -73,10 +73,18 @@ class ParsedTokenEvent:
     timestamp_fallback: bool
 
 
+@dataclass(frozen=True, slots=True)
+class TurnModelHint:
+    session_hash: str
+    turn_hash: str
+    model: str
+
+
 @dataclass(slots=True)
 class ParseOutcome:
     event: ParsedTokenEvent | None = None
     diagnostic_code: str | None = None
+    model_hint: TurnModelHint | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,4 +118,3 @@ class ScanResult:
     duplicate_events: int = 0
     skipped_events: int = 0
     bytes_processed: int = 0
-

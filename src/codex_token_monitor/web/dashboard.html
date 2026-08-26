@@ -38,7 +38,7 @@
     </section>
 
     <section class="panel">
-      <div class="section-title"><h2>날짜 × 모델</h2><span id="row-count"></span></div>
+      <div class="section-title"><h2>날짜별 사용량</h2><span id="row-count"></span></div>
       <div class="table-wrap"><table><colgroup><col class="date-column"><col class="model-column"><col class="token-column"><col class="token-column"><col class="token-column"><col class="token-column"><col class="token-column"></colgroup><thead><tr><th>날짜</th><th>모델</th><th>입력</th><th>출력</th><th>캐시 입력</th><th>추론 출력</th><th>전체</th></tr></thead><tbody id="usage-body"></tbody></table></div>
     </section>
 
@@ -50,8 +50,6 @@
     <section class="panel" id="settings">
       <div class="section-title"><h2>설정</h2><button id="pause-toggle">감시 일시중지</button></div>
       <form id="settings-form">
-        <label class="wide">사용자 지정 로그 경로 (한 줄에 하나)<textarea id="custom-paths" rows="3" placeholder="기본 경로는 자동 탐지됩니다"></textarea></label>
-        <label>백필 범위 (일, 0=전체)<input id="backfill-days" type="number" min="0" max="36500"></label>
         <label>재조정 간격 (초)<input id="scan-interval" type="number" min="2" max="3600"></label>
         <label class="check"><input id="autostart" type="checkbox"> Windows 로그인 시 자동 시작 (현재 사용자만)</label>
         <button class="primary" type="submit">설정 저장</button><span id="settings-result"></span>

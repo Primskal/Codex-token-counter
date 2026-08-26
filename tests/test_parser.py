@@ -23,6 +23,17 @@ def test_actual_confirmed_token_count_shape_and_model_context():
     assert outcome.event.usage_source == "last"
 
 
+def test_turn_context_emits_model_hint_only_for_identified_session_and_turn():
+    item = parser()
+    assert item.parse_object(turn()).model_hint is None
+    item.parse_object(session())
+    hint = item.parse_object(turn("gpt-5.6-sol", "turn-1")).model_hint
+    assert hint is not None
+    assert hint.model == "gpt-5.6-sol"
+    assert hint.session_hash != "unknown" and hint.turn_hash != "unknown"
+    assert item.parse_object(turn("", "turn-2")).model_hint is None
+
+
 def test_missing_fields_and_unknown_schema_are_skipped():
     item = parser()
     assert item.parse_object({"type": "event_msg", "payload": {"type": "token_count"}}).diagnostic_code == "token_missing_info"
@@ -102,4 +113,3 @@ def test_cache_and_reasoning_are_not_added_to_total():
     item.parse_object(turn())
     event = item.parse_object(token(last=usage(100, 50, 80, 30, 150), total=usage(100, 50, 80, 30, 150))).event
     assert event.usage.total_tokens == 150
-

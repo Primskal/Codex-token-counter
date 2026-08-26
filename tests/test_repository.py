@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import pytest
 
 from codex_token_monitor.dashboard import create_csv
-from codex_token_monitor.models import Checkpoint, ParsedTokenEvent, TokenUsage
+from codex_token_monitor.models import Checkpoint, ParsedTokenEvent, TokenUsage, TurnModelHint
 
 
 def make_event(key="e1", day="2026-08-25", model="gpt-5.6-sol", usage=None, event_time=None):
@@ -47,6 +47,25 @@ def test_date_range_and_model_query(repository):
     repository.apply_batch(checkpoint(), [(make_event("e3", "2026-08-26", "other-model"), 2)])
     assert len(repository.query_daily("2026-08-24", "2026-08-25")) == 2
     assert [row["model"] for row in repository.query_daily("2026-08-24", "2026-08-26", "other-model")] == ["other-model"]
+
+
+def test_unknown_model_is_recovered_only_from_one_model_in_the_same_turn(repository):
+    unknown = make_event("unknown", model="unknown")
+    hint = TurnModelHint(unknown.session_hash, unknown.turn_hash, "gpt-5.6-sol")
+    repository.apply_batch(checkpoint(), [(unknown, 0)])
+    repository.apply_batch(checkpoint(), [], model_hints=[hint])
+    assert repository.query_daily("2026-08-25", "2026-08-25")[0]["model"] == "gpt-5.6-sol"
+
+    conflicting = TurnModelHint(unknown.session_hash, unknown.turn_hash, "gpt-5.6-terra")
+    repository.apply_batch(checkpoint(), [], model_hints=[conflicting])
+    assert repository.query_daily("2026-08-25", "2026-08-25")[0]["model"] == "unknown"
+
+
+def test_unknown_model_is_not_recovered_across_different_turns(repository):
+    unknown = make_event("unknown", model="unknown")
+    hint = TurnModelHint(unknown.session_hash, "c" * 64, "gpt-5.6-sol")
+    repository.apply_batch(checkpoint(), [(unknown, 0)], model_hints=[hint])
+    assert repository.query_daily("2026-08-25", "2026-08-25")[0]["model"] == "unknown"
 
 
 def test_trend_uses_half_hour_ten_day_and_month_buckets(repository):

@@ -30,7 +30,7 @@ if (-not (Test-Path -LiteralPath $python)) {
     py -3.13 -m venv (Join-Path $projectRoot '.venv')
 }
 
-& $python -m pip install -r (Join-Path $projectRoot 'requirements-dev.txt')
+& $python -m pip install -e $projectRoot -r (Join-Path $projectRoot 'requirements-dev.txt')
 if ($LASTEXITCODE -ne 0) { throw '개발 의존성 설치에 실패했습니다.' }
 & $python -m pytest -q
 if ($LASTEXITCODE -ne 0) { throw '테스트에 실패했습니다.' }

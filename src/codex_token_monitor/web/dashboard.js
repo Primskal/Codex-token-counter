@@ -243,8 +243,6 @@ async function loadStatus() {
 async function post(path, payload = {}) { return api(path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)}); }
 async function loadSettings() {
   const s = await api('/api/settings');
-  $('custom-paths').value = (s.custom_log_paths || []).join('\n');
-  $('backfill-days').value = s.backfill_days ?? 0;
   $('scan-interval').value = s.scan_interval_seconds ?? 15;
   $('autostart').checked = !!s.autostart_enabled;
 }
@@ -259,7 +257,7 @@ $('reset-diagnostics').onclick = async () => { await post('/api/diagnostics/rese
 $('settings-form').onsubmit = async e => {
   e.preventDefault();
   try {
-    await post('/api/settings', {custom_log_paths: $('custom-paths').value.split(/\r?\n/).filter(Boolean), backfill_days: Number($('backfill-days').value), scan_interval_seconds: Number($('scan-interval').value), autostart_enabled: $('autostart').checked});
+    await post('/api/settings', {scan_interval_seconds: Number($('scan-interval').value), autostart_enabled: $('autostart').checked});
     $('settings-result').textContent = '저장됨';
     await loadStatus();
   } catch (err) { $('settings-result').textContent = err.message; }

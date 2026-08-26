@@ -147,3 +147,18 @@ def test_model_switch_aggregation(tmp_path):
     monitor.run_once()
     rows = repo.query_daily("2026-08-24", "2026-08-25")
     assert {row["model"] for row in rows} == {"gpt-5.6-sol", "gpt-5.6-luna"}
+
+
+def test_repeated_turn_context_recovers_unknown_model_for_same_turn(tmp_path):
+    root, repo, monitor = setup_monitor(tmp_path)
+    records = [
+        session(),
+        turn("", "turn-1"),
+        token(),
+        turn("gpt-5.6-sol", "turn-1"),
+    ]
+    write_jsonl(root / "recover-model.jsonl", records)
+    monitor.run_once()
+    rows = repo.query_daily("2026-08-24", "2026-08-24")
+    assert len(rows) == 1
+    assert rows[0]["model"] == "gpt-5.6-sol"

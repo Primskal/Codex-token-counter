@@ -38,6 +38,10 @@ def test_dashboard_local_api_csv_and_csrf(repository, tmp_path):
         assert status == 200 and b"formatTokens" in body
         status, body, _ = get(server.url + "api/status")
         assert status == 200 and "processed_events" in json.loads(body)
+        status, body, _ = get(server.url + "api/settings")
+        settings = json.loads(body)
+        assert status == 200
+        assert "custom_log_paths" not in settings and "backfill_days" not in settings
         status, body, headers = get(server.url + "api/csv?start=2026-08-24&end=2026-08-25")
         assert body.startswith(b"\xef\xbb\xbf") and headers["Content-Type"].startswith("text/csv")
         assert post(server.url + "api/rescan", server.csrf_token)[0] == 200
@@ -123,3 +127,13 @@ def test_dashboard_renames_week_preset_and_toggles_trend_series_from_legend():
     assert "hiddenTrendSeries.delete(item.name)" in script
     assert "series.filter(item => !hiddenTrendSeries.has(item.name))" in script
     assert "button.trend-legend-item.disabled" in stylesheet
+
+
+def test_dashboard_uses_daily_usage_title_and_hides_advanced_log_options():
+    script = (files("codex_token_monitor") / "web" / "dashboard.js").read_text("utf-8")
+    template = (files("codex_token_monitor") / "web" / "dashboard.html").read_text("utf-8")
+
+    assert "날짜별 사용량" in template
+    assert "날짜 × 모델" not in template
+    assert "custom-paths" not in template and "custom-paths" not in script
+    assert "backfill-days" not in template and "backfill-days" not in script

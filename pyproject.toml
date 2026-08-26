@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codex-token-monitor"
-version = "1.2.3"
+version = "1.2.4"
 description = "Windows tray monitor for privacy-preserving Codex local token usage statistics"
 readme = "README.md"
 requires-python = ">=3.12"

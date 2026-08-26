@@ -9,11 +9,11 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable, Iterator
 
-from .models import Checkpoint, ParsedTokenEvent, TOKEN_FIELDS
+from .models import Checkpoint, ParsedTokenEvent, TOKEN_FIELDS, TurnModelHint
 from .parser import KST, PARSER_SCHEMA_VERSION, parser_state_from_json, parser_state_to_json
 
 
-DB_SCHEMA_VERSION = 1
+DB_SCHEMA_VERSION = 2
 
 
 class Repository:
@@ -120,6 +120,25 @@ class Repository:
                     COMMIT;
                     """
                 )
+                current = 1
+            if current < 2:
+                connection.executescript(
+                    """
+                    BEGIN;
+                    ALTER TABLE token_events ADD COLUMN model_inferred INTEGER NOT NULL DEFAULT 0
+                        CHECK(model_inferred IN (0, 1));
+                    CREATE TABLE turn_model_hints (
+                        session_hash TEXT NOT NULL,
+                        turn_hash TEXT NOT NULL,
+                        model TEXT NOT NULL,
+                        PRIMARY KEY(session_hash, turn_hash, model)
+                    );
+                    CREATE INDEX idx_turn_model_hints_turn
+                        ON turn_model_hints(session_hash, turn_hash);
+                    PRAGMA user_version=2;
+                    COMMIT;
+                    """
+                )
 
     def get_checkpoint(self, source_identity: str) -> Checkpoint | None:
         with self.connect() as connection:
@@ -153,11 +172,13 @@ class Repository:
         checkpoint: Checkpoint,
         events: Iterable[tuple[ParsedTokenEvent, int]],
         diagnostics: Counter[str] | None = None,
+        model_hints: Iterable[TurnModelHint] = (),
     ) -> tuple[int, int]:
         inserted = 0
         duplicates = 0
         now = datetime.now(timezone.utc).isoformat()
         with self.transaction() as connection:
+            touched_turns: set[tuple[str, str]] = set()
             for event, source_offset in events:
                 cursor = connection.execute(
                     """INSERT OR IGNORE INTO processed_events
@@ -192,6 +213,8 @@ class Repository:
                         int(event.timestamp_fallback),
                     ),
                 )
+                if event.session_hash != "unknown" and event.turn_hash != "unknown":
+                    touched_turns.add((event.session_hash, event.turn_hash))
                 connection.execute(
                     """INSERT INTO daily_model_aggregates
                        (local_date,model,input_tokens,output_tokens,cached_input_tokens,
@@ -207,6 +230,41 @@ class Repository:
                     (event.local_date, event.model, *usage.as_tuple()),
                 )
                 inserted += 1
+            for hint in model_hints:
+                cursor = connection.execute(
+                    """INSERT OR IGNORE INTO turn_model_hints(session_hash,turn_hash,model)
+                       VALUES(?,?,?)""",
+                    (hint.session_hash, hint.turn_hash, hint.model),
+                )
+                if cursor.rowcount:
+                    touched_turns.add((hint.session_hash, hint.turn_hash))
+            inferred_changed = False
+            for session_hash, turn_hash in touched_turns:
+                candidate_rows = connection.execute(
+                    """SELECT model FROM turn_model_hints WHERE session_hash=? AND turn_hash=?
+                       UNION
+                       SELECT model FROM token_events
+                       WHERE session_hash=? AND turn_hash=? AND model!='unknown' AND model_inferred=0""",
+                    (session_hash, turn_hash, session_hash, turn_hash),
+                ).fetchall()
+                candidates = {str(row["model"]) for row in candidate_rows}
+                resolved_model = next(iter(candidates)) if len(candidates) == 1 else "unknown"
+                inferred = int(len(candidates) == 1)
+                repair_rows = connection.execute(
+                    """SELECT event_key,model,model_inferred FROM token_events
+                       WHERE session_hash=? AND turn_hash=? AND (model='unknown' OR model_inferred=1)""",
+                    (session_hash, turn_hash),
+                ).fetchall()
+                for row in repair_rows:
+                    if row["model"] == resolved_model and int(row["model_inferred"]) == inferred:
+                        continue
+                    connection.execute(
+                        "UPDATE token_events SET model=?,model_inferred=? WHERE event_key=?",
+                        (resolved_model, inferred, row["event_key"]),
+                    )
+                    inferred_changed = True
+            if inferred_changed:
+                self._rebuild_aggregates(connection)
             for code, count in (diagnostics or {}).items():
                 connection.execute(
                     """INSERT INTO diagnostic_counters(code,count,last_seen_utc) VALUES(?,?,?)
@@ -382,10 +440,14 @@ class Repository:
 
     def rebuild_aggregates(self) -> None:
         with self.transaction() as connection:
-            connection.execute("DELETE FROM daily_model_aggregates")
-            connection.execute(
-                """INSERT INTO daily_model_aggregates
-                   SELECT local_date,model,SUM(input_tokens),SUM(output_tokens),SUM(cached_input_tokens),
-                          SUM(reasoning_output_tokens),SUM(total_tokens),COUNT(*)
-                   FROM token_events GROUP BY local_date,model"""
-            )
+            self._rebuild_aggregates(connection)
+
+    @staticmethod
+    def _rebuild_aggregates(connection: sqlite3.Connection) -> None:
+        connection.execute("DELETE FROM daily_model_aggregates")
+        connection.execute(
+            """INSERT INTO daily_model_aggregates
+               SELECT local_date,model,SUM(input_tokens),SUM(output_tokens),SUM(cached_input_tokens),
+                      SUM(reasoning_output_tokens),SUM(total_tokens),COUNT(*)
+               FROM token_events GROUP BY local_date,model"""
+        )

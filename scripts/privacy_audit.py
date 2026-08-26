@@ -18,8 +18,9 @@ ALLOWED_COLUMNS = {
     "token_events": {
         "event_key", "local_date", "model", "session_hash", "turn_hash", "usage_source",
         "input_tokens", "output_tokens", "cached_input_tokens", "reasoning_output_tokens",
-        "total_tokens", "timestamp_fallback",
+        "total_tokens", "timestamp_fallback", "model_inferred",
     },
+    "turn_model_hints": {"session_hash", "turn_hash", "model"},
     "daily_model_aggregates": {
         "local_date", "model", "input_tokens", "output_tokens", "cached_input_tokens",
         "reasoning_output_tokens", "total_tokens", "event_count",

@@ -12,7 +12,7 @@ from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
 from .discovery import discover_jsonl_files, discover_log_roots, roots_status
-from .models import Checkpoint, ParserState, ScanResult, SourceIdentity
+from .models import Checkpoint, ParserState, ScanResult, SourceIdentity, TurnModelHint
 from .parser import CodexEventParser, PARSER_SCHEMA_VERSION
 from .reader import checkpoint_line_matches, iter_complete_lines
 from .repository import Repository
@@ -65,22 +65,13 @@ class MonitorService:
         self._roots_override = roots_override
 
     def _settings(self) -> tuple[list[Path], int, float]:
-        custom = self.repository.get_setting("custom_log_paths", [])
-        if not isinstance(custom, list):
-            custom = []
-        custom_strings = [str(item) for item in custom if isinstance(item, str)]
-        backfill_days = self.repository.get_setting("backfill_days", 0)
         interval = self.repository.get_setting("scan_interval_seconds", 15)
-        try:
-            backfill_days = max(0, min(36500, int(backfill_days)))
-        except (TypeError, ValueError):
-            backfill_days = 0
         try:
             interval = max(2.0, min(3600.0, float(interval)))
         except (TypeError, ValueError):
             interval = 15.0
-        roots = self._roots_override if self._roots_override is not None else discover_log_roots(custom_strings)
-        return roots, backfill_days, interval
+        roots = self._roots_override if self._roots_override is not None else discover_log_roots()
+        return roots, 0, interval
 
     def status(self) -> dict[str, object]:
         with self._status_lock:
@@ -247,6 +238,7 @@ class MonitorService:
             source_instance=source.identity,
         )
         batch_events: list[tuple[object, int]] = []
+        batch_model_hints: list[TurnModelHint] = []
         batch_diagnostics: Counter[str] = Counter()
         batch_count = 0
         last_end = checkpoint.byte_offset
@@ -254,7 +246,7 @@ class MonitorService:
         last_hash = checkpoint.last_line_hash
 
         def commit_batch() -> None:
-            nonlocal batch_events, batch_diagnostics, batch_count
+            nonlocal batch_events, batch_model_hints, batch_diagnostics, batch_count
             checkpoint.byte_offset = last_end
             checkpoint.last_line_start = last_start
             checkpoint.last_line_hash = last_hash
@@ -263,10 +255,12 @@ class MonitorService:
                 checkpoint,
                 batch_events,  # type: ignore[arg-type]
                 batch_diagnostics,
+                batch_model_hints,
             )
             result.inserted_events += inserted
             result.duplicate_events += duplicates
             batch_events = []
+            batch_model_hints = []
             batch_diagnostics = Counter()
             batch_count = 0
 
@@ -276,6 +270,8 @@ class MonitorService:
             result.bytes_processed += line.end - line.start
             if outcome.event is not None:
                 batch_events.append((outcome.event, line.start))
+            if outcome.model_hint is not None:
+                batch_model_hints.append(outcome.model_hint)
             if outcome.diagnostic_code:
                 batch_diagnostics[outcome.diagnostic_code] += 1
                 if outcome.event is None:

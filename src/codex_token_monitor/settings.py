@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 from typing import Protocol
@@ -81,20 +80,6 @@ class AutostartManager:
 
 def validate_settings(payload: dict[str, object]) -> dict[str, object]:
     result: dict[str, object] = {}
-    paths = payload.get("custom_log_paths", [])
-    if isinstance(paths, list):
-        clean_paths: list[str] = []
-        for item in paths[:20]:
-            if not isinstance(item, str) or not item.strip():
-                continue
-            path = Path(item.strip()).expanduser()
-            # The monitor never writes to a configured log path.
-            clean_paths.append(os.path.abspath(path))
-        result["custom_log_paths"] = clean_paths
-    try:
-        result["backfill_days"] = max(0, min(36500, int(payload.get("backfill_days", 0))))
-    except (TypeError, ValueError):
-        raise ValueError("백필 범위는 0 이상의 정수여야 합니다.") from None
     try:
         result["scan_interval_seconds"] = max(2, min(3600, int(payload.get("scan_interval_seconds", 15))))
     except (TypeError, ValueError):
@@ -102,4 +87,3 @@ def validate_settings(payload: dict[str, object]) -> dict[str, object]:
     if "autostart_enabled" in payload:
         result["autostart_enabled"] = bool(payload["autostart_enabled"])
     return result
-
